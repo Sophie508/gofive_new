@@ -1,0 +1,173 @@
+.game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  text-align: center;
+  padding: 20px;
+  color: #333;
+  background-color: #fff;
+}
+
+.darkMode {
+  color: #e0e0e0;
+  background-color: #1a1a1a;
+  /* 暗黑模式背景色 */
+}
+
+.status {
+  margin: 10px 0;
+}
+
+.board {
+  display: inline-block;
+  border: 2px solid var(--border-color, #000);
+  /* 使用变量控制边框颜色 */
+  margin: 0 auto;
+  background-color: var(--board-bg, hsl(0, 43%, 90%));
+  /* 默认浅粉色 */
+}
+
+.boardRow {
+  display: flex;
+  justify-content: center;
+}
+
+.square {
+  width: 35px;
+  height: 35px;
+  font-size: 16px;
+  margin: 1px;
+  border: 1px solid var(--border-color, #000);
+  background-color: var(--square-bg, hsl(0, 43%, 90%));
+  color: var(--text-color, #000);
+  transition: all 0.3s;
+  position: relative;
+  cursor: pointer;
+}
+
+.darkMode .square {
+  --border-color: #555;
+  --square-bg: #4a2c2a;
+  --text-color: #fff;
+}
+
+/* 只在有棋子时显示圆形 */
+.square:where(:not(:empty)) {
+  background-color: var(--piece-bg, #fff);
+  font-weight: bold;
+  border-radius: 50%;
+}
+
+.darkMode .square:where(:not(:empty)) {
+  --piece-bg: #000;
+  color: #fff;
+}
+
+/* 预览效果 */
+.square[data-preview]:empty::after {
+  content: attr(data-preview);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.5;
+  font-weight: bold;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  background-color: var(--piece-bg, #fff);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  opacity: 0;
+}
+
+/* 悬停时显示预览 */
+.square[data-preview]:empty:hover::after {
+  opacity: 0.5;
+}
+
+.darkMode .square[data-preview]:empty:hover::after {
+  background-color: #000;
+  color: #fff;
+  opacity: 0.3;
+}
+
+/* 主题切换按钮样式 */
+.themeToggle {
+  margin-top: 7px;
+  margin-bottom: 7px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 5px;
+}
+
+.darkMode .themeToggle {
+  background-color: #444;
+  color: #fff;
+}
+
+/* 游戏容器 */
+.gameContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 800px;
+  /* 根据需要调整 */
+  margin: 0 auto;
+}
+
+/* 左侧按钮 */
+.leftButton {
+  position: absolute;
+  left: 20px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+}
+
+.leftButton:hover {
+  background-color: #ddd;
+  transform: translateY(-2px);
+}
+
+/* 右侧按钮 */
+.rightButton {
+  position: absolute;
+  right: 20px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+}
+
+.rightButton:hover {
+  background-color: #ddd;
+  transform: translateY(-2px);
+}
+
+.darkMode .leftButton,
+.darkMode .rightButton {
+  background-color: #444;
+  color: #fff;
+}
+
+.darkMode .leftButton:hover,
+.darkMode .rightButton:hover {
+  background-color: #555;
+}

@@ -1,0 +1,42 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  text-align: center;
+  background-color: #f5f5f5; /* 默认背景色 */
+  background-image: repeating-linear-gradient(
+    45deg,
+    /* 条纹角度 */ rgba(0, 0, 0, 0.1),
+    /* 条纹颜色 */ rgba(0, 0, 0, 0.1) 10px,
+    /* 条纹宽度 */ transparent 10px,
+    /* 背景色 */ transparent 20px /* 背景宽度 */
+  );
+}
+
+.container h1 {
+  font-size: 36px;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.button {
+  padding: 12px 24px;
+  margin: 10px;
+  border: 2px solid #333;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  background-color: #ffffff;
+  color: #333333;
+}
+
+.button:hover {
+  background-color: #f0f0f0;
+  border-color: #000;
+  transform: translateY(-2px);
+}
