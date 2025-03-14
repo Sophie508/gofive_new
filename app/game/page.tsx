@@ -1,8 +1,11 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTheme } from "next-themes";
 import styles from "./game.module.css";
 
+// Square and Board components
 function Square({
   value,
   onSquareClick,
@@ -75,30 +78,36 @@ function Board({
       </div>
     ));
 
+  console.log("Board rendered with", board.length, "rows"); // 调试日志
   return <div className={styles.board}>{board}</div>;
 }
 
 export default function Game() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false); // 用于避免 SSR 闪现
 
   const mode = searchParams.get("mode") || "human";
+  const userId = parseInt(searchParams.get("userId") || "0");
   const [boardSize] = useState(15);
   const [history, setHistory] = useState([
     Array(boardSize * boardSize).fill(null),
   ]);
   const [currentMove, setCurrentMove] = useState(0);
+  const [time, setTime] = useState(0);
   const xIsNext = currentMove % 2 === 0;
   const currentSquares = history[currentMove];
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isAIThinking, setIsAIThinking] = useState(false);
 
+  // 确保组件在客户端加载完成后渲染
   useEffect(() => {
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
-    setIsDarkMode(prefersDark.matches);
-    const handler = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
-    prefersDark.addEventListener("change", handler);
-    return () => prefersDark.removeEventListener("change", handler);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => setTime((prev) => prev + 1), 1000);
+    return () => clearInterval(interval);
   }, []);
 
   function handlePlay(nextSquares: string[]) {
@@ -116,7 +125,6 @@ export default function Game() {
         handleClick(aiMove);
         setIsAIThinking(false);
       }, delay);
-
       return () => clearTimeout(timer);
     }
   }, [currentMove, mode]);
@@ -132,52 +140,91 @@ export default function Game() {
   const resetGame = () => {
     setHistory([Array(boardSize * boardSize).fill(null)]);
     setCurrentMove(0);
+    setTime(0);
   };
 
   const goBackHome = () => {
     router.push("/");
   };
 
+  const saveScore = async () => {
+    if (!userId) {
+      alert("请先登录");
+      return;
+    }
+    try {
+      const res = await fetch("/api/scoreboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, steps: currentMove, time }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("分数已自动保存");
+        // Optional: router.push("/scoreboard");
+      } else {
+        alert("保存分数失败");
+      }
+    } catch (err) {
+      alert("保存分数时出错");
+    }
+  };
+
   const winner = calculateWinner(currentSquares);
+  useEffect(() => {
+    if (winner && userId) {
+      saveScore();
+    }
+  }, [winner, userId]);
+
   const status = winner
     ? `Winner: ${winner}`
     : `Next Player: ${xIsNext ? "X" : "O"}`;
 
+  // 在客户端加载完成前不渲染内容，避免闪现
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <div className={`${styles.game} ${isDarkMode ? styles.darkMode : ""}`}>
-      <h1>The Game is beginning</h1>
-      <div>Mode: {mode === "ai" ? "Human vs AI" : "Human vs Human"}</div>
+    <div className={`${styles.game} ${theme === "dark" ? styles.dark : styles.light}`}>
+      <div className={styles.header}>
+        <h1>The Game is beginning</h1>
+        <div>Mode: {mode === "ai" ? "Human vs AI" : "Human vs Human"}</div>
+      </div>
       <div className={styles.status}>{status}</div>
+      <div>Steps: {currentMove}, Time: {time} seconds</div>
 
       <div className={styles.gameContainer}>
-        <button onClick={goBackHome} className={styles.leftButton}>
+        <button className={styles.leftButton} onClick={goBackHome}>
           Go back home
         </button>
-
-        <Board
-          boardSize={boardSize}
-          xIsNext={xIsNext}
-          squares={currentSquares}
-          onPlay={handlePlay}
-          mode={mode}
-          disabled={isAIThinking}
-        />
-
-        <button onClick={resetGame} className={styles.rightButton}>
+        <div className={styles.boardWrapper}>
+          <Board
+            boardSize={boardSize}
+            xIsNext={xIsNext}
+            squares={currentSquares}
+            onPlay={handlePlay}
+            mode={mode}
+            disabled={isAIThinking}
+          />
+        </div>
+        <button className={styles.rightButton} onClick={resetGame}>
           Reset the game
         </button>
       </div>
 
       <button
-        onClick={() => setIsDarkMode(!isDarkMode)}
         className={styles.themeToggle}
+        onClick={() => setTheme(theme === "light" ? "dark" : "light")}
       >
-        Toggle {isDarkMode ? "Light" : "Dark"} Mode
+        Toggle {theme === "light" ? "Dark" : "Light"} Mode
       </button>
     </div>
   );
 }
 
+// calculateWinner, getAIMove, checkThreeInARow functions
 function calculateWinner(squares: string[]) {
   const boardSize = Math.sqrt(squares.length);
   const directions = [
@@ -218,51 +265,45 @@ function calculateWinner(squares: string[]) {
 }
 
 function getAIMove(squares: string[], boardSize: number) {
-  // 1. 检查 AI 是否有 4 颗子连成一线（进攻）
   for (let i = 0; i < squares.length; i++) {
     if (squares[i] === null) {
       const newSquares = squares.slice();
       newSquares[i] = "O";
       if (calculateWinner(newSquares) === "O") {
-        return i; // AI 直接赢
+        return i;
       }
     }
   }
 
-  // 玩家是否有 4 颗子连成一线（防守）
   for (let i = 0; i < squares.length; i++) {
     if (squares[i] === null) {
       const newSquares = squares.slice();
       newSquares[i] = "X";
       if (calculateWinner(newSquares) === "X") {
-        return i; // 堵住玩家的胜利位置
+        return i;
       }
     }
   }
 
-  // 检查human是否有 3 颗子连成一线
   for (let i = 0; i < squares.length; i++) {
     if (squares[i] === null) {
       if (checkThreeInARow(squares, boardSize, i, "X")) {
-        return i; // 堵住玩家的 3 连
+        return i;
       }
     }
   }
 
-  // 占据中心位置
   const center = Math.floor((boardSize * boardSize) / 2);
   if (squares[center] === null) {
     return center;
   }
 
-  // otherwise-随机选择一个空位
   const emptySquares = squares
     .map((val, idx) => (val === null ? idx : null))
     .filter((val) => val !== null);
   return emptySquares[Math.floor(Math.random() * emptySquares.length)] || 0;
 }
 
-// check-某个位置是否会形成 3 连
 function checkThreeInARow(
   squares: string[],
   boardSize: number,
@@ -283,8 +324,6 @@ function checkThreeInARow(
 
   for (const [dx, dy] of directions) {
     let count = 1;
-
-    // 检查正方向
     let x = row + dx;
     let y = col + dy;
     while (
@@ -299,7 +338,6 @@ function checkThreeInARow(
       y += dy;
     }
 
-    // 检查另一个方向
     x = row - dx;
     y = col - dy;
     while (

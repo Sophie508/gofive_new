@@ -1,39 +1,71 @@
+/* 游戏容器 */
 .game {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  height: 100vh;
+  justify-content: flex-start;
+  min-height: 100vh; /* 确保内容有足够高度 */
   text-align: center;
   padding: 20px;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* 头部信息 */
+.header {
+  margin-bottom: 20px;
+}
+
+/* Light Mode 样式 */
+.light {
   color: #333;
   background-color: #fff;
 }
 
-.darkMode {
+/* Dark Mode 样式 */
+.dark {
   color: #e0e0e0;
   background-color: #1a1a1a;
-  /* 暗黑模式背景色 */
 }
 
+/* 状态信息 */
 .status {
+  font-size: 20px;
   margin: 10px 0;
 }
 
+/* 棋盘容器 */
 .board {
+  position: relative;
   display: inline-block;
   border: 2px solid var(--border-color, #000);
-  /* 使用变量控制边框颜色 */
-  margin: 0 auto;
+  margin: 0 auto; /* 居中显示 */
   background-color: var(--board-bg, hsl(0, 43%, 90%));
-  /* 默认浅粉色 */
 }
 
+/* 棋盘包裹容器 */
+.boardWrapper {
+  flex: 1; /* 占据中间空间 */
+}
+
+/* Light Mode 棋盘样式 */
+.light .board {
+  --border-color: #000;
+  --board-bg: hsl(0, 43%, 90%);
+}
+
+/* Dark Mode 棋盘样式 */
+.dark .board {
+  --border-color: #555;
+  --board-bg: #4a2c2a;
+}
+
+/* 棋盘行 */
 .boardRow {
   display: flex;
   justify-content: center;
 }
 
+/* 棋盘格子 */
 .square {
   width: 35px;
   height: 35px;
@@ -47,20 +79,34 @@
   cursor: pointer;
 }
 
-.darkMode .square {
+/* Light Mode 格子样式 */
+.light .square {
+  --text-color: #000;
+  --square-bg: hsl(0, 43%, 90%);
+}
+
+/* Dark Mode 格子样式 */
+.dark .square {
   --border-color: #555;
   --square-bg: #4a2c2a;
   --text-color: #fff;
 }
 
-/* 只在有棋子时显示圆形 */
+/* 棋子显示为圆形 */
 .square:where(:not(:empty)) {
   background-color: var(--piece-bg, #fff);
   font-weight: bold;
   border-radius: 50%;
 }
 
-.darkMode .square:where(:not(:empty)) {
+/* Light Mode 棋子 */
+.light .square:where(:not(:empty)) {
+  --piece-bg: #fff;
+  color: #000;
+}
+
+/* Dark Mode 棋子 */
+.dark .square:where(:not(:empty)) {
   --piece-bg: #000;
   color: #fff;
 }
@@ -91,44 +137,27 @@
   opacity: 0.5;
 }
 
-.darkMode .square[data-preview]:empty:hover::after {
+/* Dark Mode 预览 */
+.dark .square[data-preview]:empty:hover::after {
   background-color: #000;
   color: #fff;
   opacity: 0.3;
 }
 
-/* 主题切换按钮样式 */
-.themeToggle {
-  margin-top: 7px;
-  margin-bottom: 7px;
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
-  background-color: #f0f0f0;
-  border: none;
-  border-radius: 5px;
-}
-
-.darkMode .themeToggle {
-  background-color: #444;
-  color: #fff;
-}
-
-/* 游戏容器 */
+/* 游戏容器（包含棋盘和按钮） */
 .gameContainer {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   width: 100%;
-  max-width: 800px;
-  /* 根据需要调整 */
-  margin: 0 auto;
+  max-width: 800px; /* 调整为适应棋盘和按钮的宽度 */
+  margin: 20px auto;
 }
 
-/* 左侧按钮 */
+/* 左侧按钮（Go back home） */
 .leftButton {
-  position: absolute;
-  left: 20px;
+  margin-right: 20px; /* 与棋盘保持间距 */
   padding: 10px 20px;
   font-size: 16px;
   cursor: pointer;
@@ -136,17 +165,30 @@
   border: none;
   border-radius: 5px;
   transition: all 0.3s ease;
+  min-width: 150px; /* 增加最小宽度以容纳三个单词 */
+  white-space: nowrap; /* 防止文本换行 */
+  text-align: center; /* 文本居中 */
 }
 
-.leftButton:hover {
-  background-color: #ddd;
-  transform: translateY(-2px);
-}
-
-/* 右侧按钮 */
+/* 右侧按钮（Reset the game） */
 .rightButton {
-  position: absolute;
-  right: 20px;
+  margin-left: 20px; /* 与棋盘保持间距 */
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+  min-width: 150px; /* 增加最小宽度以容纳三个单词 */
+  white-space: nowrap; /* 防止文本换行 */
+  text-align: center; /* 文本居中 */
+}
+
+/* 主题切换按钮 */
+.themeToggle {
+  display: block;
+  margin: 20px auto;
   padding: 10px 20px;
   font-size: 16px;
   cursor: pointer;
@@ -156,18 +198,32 @@
   transition: all 0.3s ease;
 }
 
-.rightButton:hover {
-  background-color: #ddd;
-  transform: translateY(-2px);
+/* Light Mode 按钮样式 */
+.light .leftButton,
+.light .rightButton,
+.light .themeToggle {
+  background-color: #f0f0f0;
+  color: #333;
 }
 
-.darkMode .leftButton,
-.darkMode .rightButton {
+/* Dark Mode 按钮样式 */
+.dark .leftButton,
+.dark .rightButton,
+.dark .themeToggle {
   background-color: #444;
   color: #fff;
 }
 
-.darkMode .leftButton:hover,
-.darkMode .rightButton:hover {
+/* 按钮悬停效果 */
+.leftButton:hover,
+.rightButton:hover,
+.themeToggle:hover {
+  background-color: #ddd;
+}
+
+/* Dark Mode 按钮悬停 */
+.dark .leftButton:hover,
+.dark .rightButton:hover,
+.dark .themeToggle:hover {
   background-color: #555;
 }
