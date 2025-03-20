@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import styles from "./game.module.css";
+import useSWR, { mutate } from 'swr';
+import { useIsClient } from 'foxact/use-is-client';
 
 // Square and Board components
 function Square({
@@ -78,7 +80,6 @@ function Board({
       </div>
     ));
 
-  console.log("Board rendered with", board.length, "rows"); // 调试日志
   return <div className={styles.board}>{board}</div>;
 }
 
@@ -86,24 +87,28 @@ export default function Game() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false); // 用于避免 SSR 闪现
+  const isClient = useIsClient(); // 使用 useIsClient 替换 mounted
+  const [userId, setUserId] = useState<number>(0);
 
   const mode = searchParams.get("mode") || "human";
-  const userId = parseInt(searchParams.get("userId") || "0");
   const [boardSize] = useState(15);
-  const [history, setHistory] = useState([
-    Array(boardSize * boardSize).fill(null),
-  ]);
+  const [history, setHistory] = useState([Array(boardSize * boardSize).fill(null)]);
   const [currentMove, setCurrentMove] = useState(0);
   const [time, setTime] = useState(0);
   const xIsNext = currentMove % 2 === 0;
   const currentSquares = history[currentMove];
   const [isAIThinking, setIsAIThinking] = useState(false);
 
-  // 确保组件在客户端加载完成后渲染
+  // 在客户端加载 userId
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (isClient) {
+      const cookieUserId = document.cookie
+        .split("; ")
+        .find(row => row.startsWith("userId="))
+        ?.split("=")[1];
+      setUserId(parseInt(cookieUserId || "0"));
+    }
+  }, [isClient]);
 
   useEffect(() => {
     const interval = setInterval(() => setTime((prev) => prev + 1), 1000);
@@ -117,7 +122,7 @@ export default function Game() {
   }
 
   useEffect(() => {
-    if (mode === "ai" && !xIsNext && !calculateWinner(currentSquares)) {
+    if (isClient && mode === "ai" && !xIsNext && !calculateWinner(currentSquares)) {
       setIsAIThinking(true);
       const delay = Math.floor(Math.random() * 1000) + 500;
       const timer = setTimeout(() => {
@@ -127,11 +132,10 @@ export default function Game() {
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [currentMove, mode]);
+  }, [currentMove, mode, isClient]);
 
   function handleClick(i: number) {
-    if (calculateWinner(currentSquares) || currentSquares[i] || isAIThinking)
-      return;
+    if (calculateWinner(currentSquares) || currentSquares[i] || isAIThinking) return;
     const nextSquares = currentSquares.slice();
     nextSquares[i] = xIsNext ? "X" : "O";
     handlePlay(nextSquares);
@@ -148,7 +152,7 @@ export default function Game() {
   };
 
   const saveScore = async () => {
-    if (!userId) {
+    if (!userId || userId === 0) {
       alert("请先登录");
       return;
     }
@@ -161,7 +165,7 @@ export default function Game() {
       const data = await res.json();
       if (data.success) {
         alert("分数已自动保存");
-        // Optional: router.push("/scoreboard");
+        mutate("/api/scoreboard", data, false);
       } else {
         alert("保存分数失败");
       }
@@ -181,8 +185,7 @@ export default function Game() {
     ? `Winner: ${winner}`
     : `Next Player: ${xIsNext ? "X" : "O"}`;
 
-  // 在客户端加载完成前不渲染内容，避免闪现
-  if (!mounted) {
+  if (!isClient) {
     return null;
   }
 
@@ -304,12 +307,7 @@ function getAIMove(squares: string[], boardSize: number) {
   return emptySquares[Math.floor(Math.random() * emptySquares.length)] || 0;
 }
 
-function checkThreeInARow(
-  squares: string[],
-  boardSize: number,
-  position: number,
-  player: string
-) {
+function checkThreeInARow(squares: string[], boardSize: number, position: number, player: string) {
   const directions = [
     [1, 0], // 水平
     [0, 1], // 垂直

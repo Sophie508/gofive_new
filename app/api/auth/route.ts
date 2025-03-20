@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { users } from "@/schema";
 import { eq } from "drizzle-orm";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs"; 
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -21,29 +21,50 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { username, password } = authSchema.parse(body);
+
+ 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 插入之前显式检查用户是否存在
+    // 检查用户名是否已存在
     const existingUser = await db
       .select()
       .from(users)
       .where(eq(users.username, username));
 
     if (existingUser.length > 0) {
-      return NextResponse.json({ success: false, error: "Username already exists" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Username already exists" },
+        { status: 400 }
+      );
     }
 
     // 插入新用户
-    const result = await db.insert(users).values({ username, password: hashedPassword });
+    const result = await db
+      .insert(users)
+      .values({ username, password: hashedPassword });
+
     console.log("Insert result:", result);
 
-    return NextResponse.json({ success: true, message: "User registered" }, { status: 201 });
+    return NextResponse.json(
+      { success: true, message: "User registered" },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error("Error in POST /api/auth:", error); // 打印详细错误
+    console.error("Error in POST /api/auth:", error);
+
+    // 处理 Zod 验证错误
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: error.errors[0].message }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: error.errors[0].message },
+        { status: 400 }
+      );
     }
-    return NextResponse.json({ success: false, error: (error as Error).message || "Internal server error" }, { status: 500 });
+
+    // 处理其他错误
+    return NextResponse.json(
+      { success: false, error: (error as Error).message || "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -52,26 +73,64 @@ export async function GET(request: Request) {
   const username = searchParams.get("username");
   const password = searchParams.get("password");
 
+  // 检查用户名和密码是否提供
   if (!username || !password) {
-    return NextResponse.json({ success: false, error: "Username and password are required" }, { status: 400 });
+    return NextResponse.json(
+      { success: false, error: "Username and password are required" },
+      { status: 400 }
+    );
   }
 
   try {
+    // 验证输入数据
     const parsedData = authSchema.parse({ username, password });
+
+    // 查找用户
     const user = await db
       .select()
       .from(users)
       .where(eq(users.username, parsedData.username));
 
+    // 检查用户是否存在并验证密码
     if (user.length && (await bcrypt.compare(parsedData.password, user[0].password))) {
-      return NextResponse.json({ success: true, userId: user[0].id }, { status: 200 });
+      const response = NextResponse.json(
+        { success: true, userId: user[0].id },
+        { status: 200 }
+      );
+
+      // 设置登录状态的 Cookie
+      response.cookies.set("userId", user[0].id.toString(), {
+        path: "/",
+        maxAge: 86400, // 1 天
+      });
+      response.cookies.set("isLoggedIn", "true", {
+        path: "/",
+        maxAge: 86400, // 1 天
+      });
+
+      return response;
     }
-    return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
+
+    // 用户名或密码错误
+    return NextResponse.json(
+      { success: false, error: "Invalid credentials" },
+      { status: 401 }
+    );
   } catch (error) {
     console.error("Error in GET /api/auth:", error);
+
+    // 处理 Zod 验证错误
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: error.errors[0].message }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: error.errors[0].message },
+        { status: 400 }
+      );
     }
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+
+    // 处理其他错误
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import useSWR from 'swr';
 import { useRouter } from "next/navigation";
 import styles from "../page.module.css";
 
@@ -10,32 +10,28 @@ interface Score {
   time: number;
 }
 
+// 定义一个 fetcher 函数，用于处理 fetch 请求
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export default function Scoreboard() {
-  const [scores, setScores] = useState<Score[]>([]);
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchScores = async () => {
-      try {
-        const res = await fetch("/api/scoreboard");
-        if (!res.ok) {
-          throw new Error("Failed to fetch scores");
-        }
-        const data: Score[] = await res.json();
-        setScores(data);
-      } catch (error) {
-        console.error("Error fetching scores:", error);
-        setScores([]); // 如果请求失败，设置为空数组
-      }
-    };
+  // 使用 useSWR 获取分数数据
+  const { data: scores, error, isLoading } = useSWR<Score[]>("/api/scoreboard", fetcher);
 
-    fetchScores();
-  }, []);
+  if (error) {
+    console.error("Error fetching scores:", error);
+    return <div>加载分数失败</div>;
+  }
+
+  if (isLoading) {
+    return <div>加载中...</div>;
+  }
 
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>记分板</h1>
-      {scores.length === 0 ? (
+      {!scores || scores.length === 0 ? (
         <p>暂无记录</p>
       ) : (
         scores.map((score, index) => (

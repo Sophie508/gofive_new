@@ -6,8 +6,8 @@ export default defineConfig({
   dialect: "postgresql",
   dbCredentials: {
     host: "localhost",
-    port: 5432,
-    user: "qinsuliu",
+    port: 5433,
+    user: "postgres",
     database: "gofive_db",
     ssl: false,
   },

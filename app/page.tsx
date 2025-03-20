@@ -2,29 +2,38 @@
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { useState, useEffect } from "react";
+import useSWR, { mutate } from "swr";
+import { useLocalStorage } from 'foxact/use-local-storage'; // 引入 useLocalStorage
+
+// - swr 的数据获取
+const fetcher = (url: string, options?: RequestInit) =>
+  fetch(url, options).then((res) => res.json());
 
 export default function Home() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [userId, setUserId] = useState<number | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 使用 useLocalStorage 管理 userId 和 isLoggedIn
+  const [userId, setUserId] = useLocalStorage<number | null>("userId", null);
+  const [isLoggedIn, setIsLoggedIn] = useLocalStorage<boolean>("isLoggedIn", false);
+
+  // 使用 swr 处理注册请求
   const handleRegister = async () => {
-    setError(null); // 清空错误信息
+    setError(null);
     if (!username || !password) {
       setError("请填写用户名和密码");
       return;
     }
 
     try {
-      const res = await fetch("/api/auth", {
+      const data = await fetcher("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
-      const data = await res.json();
+
       if (data.success) {
         alert("注册成功，请登录");
         setUsername("");
@@ -37,25 +46,23 @@ export default function Home() {
     }
   };
 
+  // 使用 swr 处理登录请求
   const handleLogin = async () => {
-    setError(null); // 清空错误信息
+    setError(null);
     if (!username || !password) {
       setError("请填写用户名和密码");
       return;
     }
 
     try {
-      const res = await fetch(
+      const data = await fetcher(
         `/api/auth?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
-        { method: "GET" }
+        { method: "GET", credentials: "include" }
       );
-      const data = await res.json();
+
       if (data.success) {
         setUserId(data.userId);
         setIsLoggedIn(true);
-        // 存储 userId 和登录状态（临时使用 localStorage，推荐使用 next-auth）
-        localStorage.setItem("userId", data.userId.toString());
-        localStorage.setItem("isLoggedIn", "true");
         alert("登录成功");
       } else {
         setError(data.error || "登录失败");
@@ -84,20 +91,17 @@ export default function Home() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUserId(null);
-    localStorage.removeItem("userId");
-    localStorage.removeItem("isLoggedIn");
+    document.cookie = "userId=; path=/; max-age=0";
+    document.cookie = "isLoggedIn=; path=/; max-age=0";
     alert("已登出");
   };
 
-  // 检查是否已登录（页面加载时）
   useEffect(() => {
-    const storedUserId = localStorage.getItem("userId");
-    const storedIsLoggedIn = localStorage.getItem("isLoggedIn");
-    if (storedUserId && storedIsLoggedIn === "true") {
-      setUserId(parseInt(storedUserId, 10));
-      setIsLoggedIn(true);
+    if (userId && isLoggedIn) {
+      document.cookie = `userId=${userId}; path=/; maxAge=86400`;
+      document.cookie = `isLoggedIn=true; path=/; maxAge=86400`;
     }
-  }, []);
+  }, [userId, isLoggedIn]);
 
   return (
     <div className={styles.container}>
